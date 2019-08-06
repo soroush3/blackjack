@@ -51,7 +51,6 @@ def main():
         print(blackjack.player_hand, blackjack.dealer_hand)
 
         user_input = input("Would you like to play again? - (y)es or (n)o : ")
-        print(user_input.lower())
         if user_input == "y" or user_input == 'n':
             continue
         else:
