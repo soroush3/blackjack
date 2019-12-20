@@ -106,8 +106,6 @@ class BlackJack:
         # returns the sum of the dealer's and player's hand
         return sum(self.cardValue[i[0]] for i in self.dealer_hand), \
                             sum(self.cardValue[i[0]] for i in self.player_hand)
-    def dealerAdventure(self):
-        dealerScore = self.checkHandScore()[0]
 
     def play(self):
         '''
