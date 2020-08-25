@@ -1,9 +1,9 @@
 """
 This program lets you play the popularly known poker game called
 Blackjack. Basic functionality is implemented where the user can 'hit' or
-'stay'. The dealer must hit on 16. The goal is to try and have a higher hand
-than the dealer. General facts: standard 52 card deck, after the end of each
-hand, the deck is refreshed, reshuffled and redealt.
+'stay'. The dealer must hit on a soft 16. The goal is to try and have a higher
+hand than the dealer. General facts: standard 52 card deck, after the end of
+each hand, the deck is refreshed, reshuffled and redealt.
 """
 import itertools, random
 
@@ -18,17 +18,15 @@ class BlackJack:
         Initializer of the BlackJack class, creates a deck and shuffles the
         cards
         """
+        faceCards = ["Jack", "Queen", "King", "Ace"]
+        suits = [' of Hearts', ' of Diamonds', ' of Clubs', ' of Spades']
         # a list of standard deck of 52 playing cards
-        self.deck = list(itertools.product(range(2,11), \
-            [' of Hearts', ' of Diamonds',' of Clubs', ' of Spades']))
+        self.deck = list(itertools.product(range(2,11), suits))
 
         self.cardValue = {"Jack":10, "Queen":10, "King":10, "Ace":11}
 
         for i in range(2, 11):
             self.cardValue[i] = i
-
-        faceCards = ["Jack", "Queen", "King", "Ace"]
-        suits = [' of Hearts', ' of Diamonds', ' of Clubs', ' of Spades']
 
         # finish building the deck with face cards now included
         for card in faceCards:
@@ -91,21 +89,35 @@ class BlackJack:
             for card in self.dealer_hand:
                 print("    ", "".join(str(i) for i in card))
 
-        elif not showAllDealer:
+        else:
             print("Dealer has:\n    " + \
                 str(self.dealer_hand[0][0])+self.dealer_hand[0][1] + \
-                                "\n    Second card hidden")
+                                "\n    Hidden")
 
         print()
         print("You have:")
         for card in self.player_hand:
             print("    ", "".join(str(i) for i in card))
         print()
+        print("---------------------------------------")
 
     def checkHandScore(self):
         # returns the sum of the dealer's and player's hand
-        return sum(self.cardValue[i[0]] for i in self.dealer_hand), \
-                            sum(self.cardValue[i[0]] for i in self.player_hand)
+        # 'aces' count has either an 11 or 1, whichever is more favorable
+        # Return: tuple(int (dealerScore), int (playerScore))
+        def getScore(theHand):
+            aceCount = 0
+            totalScore = 0
+            for card in theHand:
+                if card[0] == "Ace":
+                    aceCount += 1
+                totalScore += self.cardValue[card[0]]
+                if totalScore > 21 and aceCount > 0:
+                    totalScore -= 10
+                    aceCount -= 1
+            return totalScore
+
+        return (getScore(self.dealer_hand), getScore(self.player_hand))
 
     def play(self):
         '''
@@ -113,54 +125,55 @@ class BlackJack:
         '''
         self.shuffle()
         self.deal()
-        while True:
-            # dealer and/or player may have hit blackjack from the deal
-            check = self.dealtBlackJack()
-            if check == "dealer":
-                self.printHand(True)
-                print("Dealer has BlackJack!\nYou have lost.")
-                break
-            elif check == "player":
-                self.printHand(True)
-                print("You have BlackJack!\nYou have won.")
-                break
-            elif check == "tie":
-                self.printHand(True)
-                print("Both the Dealer and you have BlackJack!\nYou have tied.")
-                break
-
+        # dealer and/or player may have hit blackjack from the deal
+        check = self.dealtBlackJack()
+        toPlay = False
+        if check == "dealer":
+            self.printHand(True)
+            print("Dealer has BlackJack!\nYou have lost.")
+        elif check == "player":
+            self.printHand(True)
+            print("You have BlackJack!\nYou have won.")
+        elif check == "tie":
+            self.printHand(True)
+            print("Both the Dealer and you have BlackJack!\nYou have tied.")
+        else:
             self.printHand()
-            # check if player wants to hit or stay
-            while True:
-                user_input = input(\
-                    "Would you like to hit or stay? -(h)it, (s)tay: ").lower()
-                if user_input == "h" or user_input == "hit":
-                    self.player_hand.append(self.deck.pop())
-                    score = self.checkHandScore()
-                    if score[1] > 21:
-                        self.printHand(True)
-                        print("You busted!\nYou have lost.")
-                        break
-                    self.printHand()
-                    continue
-                elif user_input == "s" or user_input == "s":
+            toPlay = True
+        # check if player wants to hit or stay
+        while toPlay:
+            user_input = input(\
+                "Would you like to hit or stay? -(h)it, (s)tay: ").lower()
+            if user_input == "h" or user_input == "hit":
+                self.player_hand.append(self.deck.pop())
+                score = self.checkHandScore()
+                if score[1] > 21:
                     self.printHand(True)
-                    while self.checkHandScore()[0] <= 16:
-                        self.dealer_hand.append(self.deck.pop())
-                        self.printHand(True)
-                    winner = self.checkForWinner()
-                    if winner == "player":
-                        print("You have won.")
-                    elif winner == "dealer":
-                        print("You have lost.")
-                    elif winner == "tie":
-                        print("You have tied.")
-                    elif winner == "dealer bust":
-                        print("The dealer busted!\nYou have won")
+                    print("You busted!\nYou have lost.")
                     break
-                else:
-                    print("Invalid response, please try again.")
-            break
+                self.printHand()
+                continue
+            elif user_input == "s" or user_input == "s":
+                self.printHand(True)
+                bothHands = self.checkHandScore()
+                while bothHands[0] < bothHands[1] or \
+                        (len(self.dealer_hand) == 2 and bothHands[0] <= 16):
+                    self.dealer_hand.append(self.deck.pop())
+                    self.printHand(True)
+                    bothHands = self.checkHandScore()
+                winner = self.checkForWinner()
+                if winner == "player":
+                    print("You have won.")
+                elif winner == "dealer":
+                    print("You have lost.")
+                elif winner == "tie":
+                    print("You have tied.")
+                elif winner == "dealer bust":
+                    print("The dealer busted!\nYou have won")
+                break
+            else:
+                print("Invalid response, please try again.")
+
 if __name__ == "__main__":
     while True:
         blackjack = BlackJack()
